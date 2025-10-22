@@ -2,6 +2,8 @@ const express = require('express');
 const connectDB=require('./config/database');
 const app = express();
 const UserModel=require('./models/user');
+const {validateSignUpData}= require("./utils/validation")
+const bcrypt=require('bcrypt');
 
 
 // This will run on every request that will come to the Server. middleware to convert json into js object.
@@ -14,10 +16,24 @@ app.get("/user",(req,res)=>{
 
 // Register a new user to our app.
 app.post("/signup",async (req,res)=>{
+  
+  
+
+  // Validation of data
+  validateSignUpData(req);
+  const {firstName,lastName,emailId,password}=req.body;
+  // Encrypt the data
+
+  const passwordHash=await     bcrypt.hash(password,10);
+  console.log(passwordHash);
     
-    // We are creating new instance of the User model. and we are passing the data to that instance.
-    const user=new UserModel(req.body);
-      console.log(req.body);
+  // We are creating new instance of the User model. and we are passing the data to that instance.
+  const user=new UserModel({
+    firstName,
+      lastName,
+      emailId,
+      password:passwordHash,
+    });
     try{
       await user.save();
       res.send("User Created Successfully"); 
@@ -26,6 +42,34 @@ app.post("/signup",async (req,res)=>{
     }
 
 });
+
+// Login User using this
+app.post("/login",async (req,res)=>{
+  
+  const {emailId,password}=req.body;
+  try{
+    const user= await UserModel.findOne({
+      emailId:emailId
+    })
+
+    if(!user){
+      res.send("User not Found.");
+    }else{
+      const checkPassword=await bcrypt.compare(password,user.password);
+
+      if(!checkPassword){
+        res.send("Password Incorrect.");
+      }else{
+        res.send("User Found");
+      }
+    }
+
+  }catch(err){
+    res.status(400).send("Update Failed");
+  }
+
+});
+
 
 app.patch("/user", async (req,res)=>{
   const userId=req.body.userId;
@@ -46,7 +90,7 @@ app.patch("/user", async (req,res)=>{
   }
 
     if(data?.skills.length>10){
-      throw new Error("Skills cannot be more then 10"); 
+      throw new Error("Skills cannot be more then"); 
     }
 
     const user= await UserModel.findByIdAndUpdate({ _id:userId},isUpdateAllowed,{
