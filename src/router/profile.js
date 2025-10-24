@@ -1,5 +1,4 @@
 const express=require('express');
-const { model } = require('mongoose');
 const profileRouter= express.Router();
 const {userAuth}=require('../middlewares/auth');
 const {validateEditProfileData}=require('../utils/validation')

@@ -7,7 +7,7 @@ Here’s a GitHub-friendly (≤350 characters) description for devTinder 👇  d
 authRouter
 -POST /sigup
 -POST /login
--POST /logout
+-POST /logout 
 
 profileRouter
 -GET /profile/view
