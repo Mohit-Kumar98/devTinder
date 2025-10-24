@@ -26,7 +26,7 @@ const userAuth= async (req,res,next)=>{
             
         }
     }catch(err){
-    res.status(400).send("Error:  "+err.messge);
+    res.status(400).send("Error:  "+err.message);
   }
 
 
@@ -34,4 +34,6 @@ const userAuth= async (req,res,next)=>{
 };
 
 
-module.exports={userAuth};
+
+
+module.exports={userAuth};   
