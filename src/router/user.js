@@ -2,6 +2,7 @@ const express = require("express");
 const userRouter = express.Router();
 const { userAuth } = require("../middlewares/auth");
 const ConnectionRequest = require("../models/connectionReqest");
+const UserModel = require("../models/user");
 
 const USER_SAFE_DATA = "firstName lastName photoUrl about skills";
 
@@ -52,6 +53,62 @@ userRouter.get("/user/connections", userAuth, async (req, res) => {
     });
     res.json({
       data: data,
+    });
+  } catch (err) {
+    res.status(404).send("Error: " + err.message);
+  }
+});
+
+userRouter.get("/feed", userAuth, async (req, res) => {
+  try {
+    //saksham is loggedIn user.
+    // if saksham have already marked someone intrested or ignored someone that person should not be showned at saksham feed.
+    // if someone is saksham connection already saksham will not he her or his profile.
+    // if someone rejected saksham then also saksham will not see that person on his feed.
+    // saksham will not see himself in his feed.
+    //==========================================
+    // User should see all the user cards except
+    // 0. his own card.
+    // 1. his connection.
+    // 2. ignored people.
+    // 3. already sent the connection request.
+
+    const loggedInUser = req.user;
+    const page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+    limit = limit > 50 ? 50 : limit;
+    const skip = (page - 1) * limit;
+
+    // Find all the connection requests(sent+received)
+    const connectionReqest = await ConnectionRequest.find({
+      $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id }],
+    }).select("fromUserId toUserId");
+    //   .populate("fromUserId", "firstName")
+    //   .populate("toUserId", "firstName");
+
+    // data structure that do not contain the duplicate value.
+    // so what we have done we want all the request id that have sent request to saksham.
+    // or to whome saksham have sent the request in this id of saksham will also be included.
+
+    const hideUsersFromFeed = new Set();
+    connectionReqest.forEach((req) => {
+      hideUsersFromFeed.add(req.fromUserId.toString());
+      hideUsersFromFeed.add(req.toUserId.toString());
+    });
+
+    // Db call to find all the user whose id is not present in the hideUsersFromFeed. and also user will not contian his id as well.
+    const users = await UserModel.find({
+      $and: [
+        { _id: { $nin: Array.from(hideUsersFromFeed) } },
+        { _id: { $ne: loggedInUser._id } },
+      ],
+    })
+      .select(USER_SAFE_DATA)
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      data: users,
     });
   } catch (err) {
     res.status(404).send("Error: " + err.message);
